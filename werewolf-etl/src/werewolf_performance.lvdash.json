@@ -1,0 +1,2673 @@
+{
+  "datasets": [
+    {
+      "name": "role_performance",
+      "displayName": "Model performance by role",
+      "query": "SELECT\n  cohort_id,\n  CASE WHEN eligible_for_ranking THEN 'Eligible' ELSE 'Below minimum games' END AS ranking_status, model_name, role, team,\n  games_played, player_appearances, wins, losses,\n  100.0 * win_rate AS win_pct,\n  100.0 * survival_rate AS survival_pct,\n  100.0 * surviving_win_rate AS surviving_win_pct,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, role, team, eligible_for_ranking ORDER BY win_rate DESC)\n  END AS best_rank\nFROM model_role_performance"
+    },
+    {
+      "name": "overall_performance",
+      "displayName": "Overall model performance",
+      "query": "SELECT\n  cohort_id,\n  CASE WHEN eligible_for_ranking THEN 'Eligible' ELSE 'Below minimum games' END AS ranking_status, model_name,\n  games_played, player_appearances, wins, losses,\n  100.0 * win_rate AS win_pct,\n  100.0 * episode_equal_win_rate AS episode_equal_win_pct,\n  100.0 * role_balanced_win_rate AS role_balanced_win_pct,\n  100.0 * surviving_win_rate AS surviving_win_pct,\n  concat_ws(', ', roles_observed) AS roles_observed,\n  min_games_in_observed_role,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, eligible_for_ranking ORDER BY role_balanced_win_rate DESC)\n  END AS best_rank\nFROM model_overall_performance"
+    },
+    {
+      "name": "pair_performance",
+      "displayName": "Model pairs on the same team",
+      "query": "SELECT\n  cohort_id,\n  CASE WHEN eligible_for_ranking THEN 'Eligible' ELSE 'Below minimum games' END AS ranking_status, team, model_a, model_b,\n  games_played, wins, losses, 100.0 * win_rate AS win_pct,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, team, eligible_for_ranking ORDER BY win_rate DESC)\n  END AS best_rank,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, team, eligible_for_ranking ORDER BY win_rate ASC)\n  END AS worst_rank\nFROM model_pair_performance"
+    },
+    {
+      "name": "lineup_performance",
+      "displayName": "Complete team lineups",
+      "query": "SELECT\n  cohort_id,\n  CASE WHEN eligible_for_ranking THEN 'Eligible' ELSE 'Below minimum games' END AS ranking_status, team, lineup_id,\n  concat_ws(' | ', transform(\n    from_json(lineup_json, 'ARRAY<STRUCT<model_name: STRING, role: STRING>>'),\n    player -> concat(player.model_name, ' [', player.role, ']')\n  )) AS lineup,\n  games_played, wins, losses, 100.0 * win_rate AS win_pct,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, team, eligible_for_ranking ORDER BY win_rate DESC)\n  END AS best_rank,\n  CASE WHEN eligible_for_ranking THEN\n    DENSE_RANK() OVER (PARTITION BY cohort_id, team, eligible_for_ranking ORDER BY win_rate ASC)\n  END AS worst_rank\nFROM team_lineup_performance"
+    }
+  ],
+  "pages": [
+    {
+      "name": "role_performance_page",
+      "displayName": "1. Models by role",
+      "layout": [
+        {
+          "widget": {
+            "name": "role_performance_intro",
+            "textbox_spec": "# 1. Models by role\n\nCompare models within the same cohort, role and team. Win and survival percentages use player appearances; Games counts distinct episodes. Best rank includes only rows meeting the pipeline's minimum games threshold. Below-threshold rows remain visible with a blank rank."
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_ranking_status_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "ranking_status",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Sample eligibility",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_cohort_id_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "cohort_id",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Cohort",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_role_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "role",
+                      "expression": "`role`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "role",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Role",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_team_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "team",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Team",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_model_name_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "model_name",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Model",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 4,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "role_performance_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "role",
+                      "expression": "`role`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "frame": {
+                "title": "Win rate and sample size",
+                "showTitle": true,
+                "description": "One point per source row; filter to a cohort before comparing.",
+                "showDescription": true
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "games_played",
+                  "displayName": "Games",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Distinct games"
+                  }
+                },
+                "y": {
+                  "fieldName": "win_pct",
+                  "displayName": "Win %",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Win %"
+                  }
+                },
+                "color": {
+                  "fieldName": "ranking_status",
+                  "displayName": "Sample eligibility",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "role_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "role_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "best_rank",
+                      "expression": "`best_rank`"
+                    },
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    },
+                    {
+                      "name": "role",
+                      "expression": "`role`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "player_appearances",
+                      "expression": "`player_appearances`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "survival_pct",
+                      "expression": "`survival_pct`"
+                    },
+                    {
+                      "name": "surviving_win_pct",
+                      "expression": "`surviving_win_pct`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`role`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`team`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`win_pct`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`model_name`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "best_rank",
+                    "displayName": "Best rank",
+                    "title": "Best rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "model_name",
+                    "displayName": "Model",
+                    "title": "Model",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "role",
+                    "displayName": "Role",
+                    "title": "Role",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "team",
+                    "displayName": "Team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "player_appearances",
+                    "displayName": "Player appearances",
+                    "title": "Player appearances",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "survival_pct",
+                    "displayName": "Survival %",
+                    "title": "Survival %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "surviving_win_pct",
+                    "displayName": "Alive winner %",
+                    "title": "Alive winner %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 10,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 11,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 12,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Model rankings by role",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "overall_performance_page",
+      "displayName": "2. Overall model rankings",
+      "layout": [
+        {
+          "widget": {
+            "name": "overall_performance_intro",
+            "textbox_spec": "# 2. Overall model rankings\n\nRanked by role balanced win percentage: each observed role receives equal weight. Models may have different role coverage; check Observed roles and Fewest games in a role. Episode equal win percentage weights each game equally; Win % weights each player appearance. Rank eligibility uses total distinct games."
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "overall_performance_ranking_status_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "overall_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "ranking_status",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Sample eligibility",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "overall_performance_cohort_id_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "overall_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "cohort_id",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Cohort",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "overall_performance_model_name_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "overall_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "model_name",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Model",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "overall_performance_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "overall_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "role_balanced_win_pct",
+                      "expression": "`role_balanced_win_pct`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "frame": {
+                "title": "Win rate and sample size",
+                "showTitle": true,
+                "description": "One point per source row; filter to a cohort before comparing.",
+                "showDescription": true
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "games_played",
+                  "displayName": "Games",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Distinct games"
+                  }
+                },
+                "y": {
+                  "fieldName": "role_balanced_win_pct",
+                  "displayName": "Role balanced win %",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Role balanced win %"
+                  }
+                },
+                "color": {
+                  "fieldName": "ranking_status",
+                  "displayName": "Sample eligibility",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "overall_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "overall_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "best_rank",
+                      "expression": "`best_rank`"
+                    },
+                    {
+                      "name": "model_name",
+                      "expression": "`model_name`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "player_appearances",
+                      "expression": "`player_appearances`"
+                    },
+                    {
+                      "name": "role_balanced_win_pct",
+                      "expression": "`role_balanced_win_pct`"
+                    },
+                    {
+                      "name": "episode_equal_win_pct",
+                      "expression": "`episode_equal_win_pct`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "surviving_win_pct",
+                      "expression": "`surviving_win_pct`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "roles_observed",
+                      "expression": "`roles_observed`"
+                    },
+                    {
+                      "name": "min_games_in_observed_role",
+                      "expression": "`min_games_in_observed_role`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`role_balanced_win_pct`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`model_name`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "best_rank",
+                    "displayName": "Best rank",
+                    "title": "Best rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "model_name",
+                    "displayName": "Model",
+                    "title": "Model",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "player_appearances",
+                    "displayName": "Player appearances",
+                    "title": "Player appearances",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "role_balanced_win_pct",
+                    "displayName": "Role balanced win %",
+                    "title": "Role balanced win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "episode_equal_win_pct",
+                    "displayName": "Episode equal win %",
+                    "title": "Episode equal win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "surviving_win_pct",
+                    "displayName": "Alive winner %",
+                    "title": "Alive winner %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "roles_observed",
+                    "displayName": "Observed roles",
+                    "title": "Observed roles",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 10,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "min_games_in_observed_role",
+                    "displayName": "Fewest games in a role",
+                    "title": "Fewest games in a role",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 11,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 12,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 13,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Overall model rankings",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "pair_performance_page",
+      "displayName": "3. Best and worst model pairs",
+      "layout": [
+        {
+          "widget": {
+            "name": "pair_performance_intro",
+            "textbox_spec": "# 3. Best and worst model pairs\n\nEach pair represents two models on the same team, counted once per game. A same-model pair requires two distinct players. Compare within a cohort and team. These are observed team outcomes, not a causal measure of teamwork. Best and worst ranks exclude rows below the pipeline's minimum games threshold."
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_ranking_status_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "ranking_status",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Sample eligibility",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_cohort_id_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "cohort_id",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Cohort",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_team_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "team",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Team",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_model_a_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "model_a",
+                      "expression": "`model_a`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "model_a",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Model A",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_model_b_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "model_b",
+                      "expression": "`model_b`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "model_b",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Model B",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 4,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "pair_performance_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "model_a",
+                      "expression": "`model_a`"
+                    },
+                    {
+                      "name": "model_b",
+                      "expression": "`model_b`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "frame": {
+                "title": "Win rate and sample size",
+                "showTitle": true,
+                "description": "One point per source row; filter to a cohort before comparing.",
+                "showDescription": true
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "games_played",
+                  "displayName": "Games",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Distinct games"
+                  }
+                },
+                "y": {
+                  "fieldName": "win_pct",
+                  "displayName": "Win %",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Win %"
+                  }
+                },
+                "color": {
+                  "fieldName": "ranking_status",
+                  "displayName": "Sample eligibility",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "pairs_best",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "best_rank",
+                      "expression": "`best_rank`"
+                    },
+                    {
+                      "name": "model_a",
+                      "expression": "`model_a`"
+                    },
+                    {
+                      "name": "model_b",
+                      "expression": "`model_b`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`win_pct`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`team`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`model_a`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`model_b`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "best_rank",
+                    "displayName": "Best rank",
+                    "title": "Best rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "model_a",
+                    "displayName": "Model A",
+                    "title": "Model A",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "model_b",
+                    "displayName": "Model B",
+                    "title": "Model B",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "team",
+                    "displayName": "Team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Highest pair win rates",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pairs_worst",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "pair_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "worst_rank",
+                      "expression": "`worst_rank`"
+                    },
+                    {
+                      "name": "model_a",
+                      "expression": "`model_a`"
+                    },
+                    {
+                      "name": "model_b",
+                      "expression": "`model_b`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`win_pct`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`team`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`model_a`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`model_b`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "worst_rank",
+                    "displayName": "Worst rank",
+                    "title": "Worst rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "model_a",
+                    "displayName": "Model A",
+                    "title": "Model A",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "model_b",
+                    "displayName": "Model B",
+                    "title": "Model B",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "team",
+                    "displayName": "Team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Lowest pair win rates",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "lineup_performance_page",
+      "displayName": "4. Best and worst team lineups",
+      "layout": [
+        {
+          "widget": {
+            "name": "lineup_performance_intro",
+            "textbox_spec": "# 4. Best and worst team lineups\n\nA lineup preserves every player's model and role, including repeated models. Win % is wins divided by distinct games. Compare within a cohort and team; rank 1 is calculated separately for each. Select Eligible to focus on lineups meeting the pipeline's minimum games threshold."
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "lineup_performance_ranking_status_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "ranking_status",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Sample eligibility",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "lineup_performance_cohort_id_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "cohort_id",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Cohort",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "lineup_performance_team_filter",
+            "queries": [
+              {
+                "name": "values",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "team",
+                    "queryName": "values"
+                  }
+                ]
+              },
+              "frame": {
+                "title": "Team",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "lineup_performance_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "lineup_id",
+                      "expression": "`lineup_id`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "frame": {
+                "title": "Win rate and sample size",
+                "showTitle": true,
+                "description": "One point per source row; filter to a cohort before comparing.",
+                "showDescription": true
+              },
+              "encodings": {
+                "x": {
+                  "fieldName": "games_played",
+                  "displayName": "Games",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Distinct games"
+                  }
+                },
+                "y": {
+                  "fieldName": "win_pct",
+                  "displayName": "Win %",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Win %"
+                  }
+                },
+                "color": {
+                  "fieldName": "ranking_status",
+                  "displayName": "Sample eligibility",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "lineups_best",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "best_rank",
+                      "expression": "`best_rank`"
+                    },
+                    {
+                      "name": "lineup",
+                      "expression": "`lineup`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "lineup_id",
+                      "expression": "`lineup_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`win_pct`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`team`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`lineup_id`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "best_rank",
+                    "displayName": "Best rank",
+                    "title": "Best rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "lineup",
+                    "displayName": "Models and roles",
+                    "title": "Models and roles",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "team",
+                    "displayName": "Team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "lineup_id",
+                    "displayName": "Lineup ID",
+                    "title": "Lineup ID",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Highest lineup win rates",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "lineups_worst",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "lineup_performance",
+                  "disaggregated": true,
+                  "fields": [
+                    {
+                      "name": "worst_rank",
+                      "expression": "`worst_rank`"
+                    },
+                    {
+                      "name": "lineup",
+                      "expression": "`lineup`"
+                    },
+                    {
+                      "name": "team",
+                      "expression": "`team`"
+                    },
+                    {
+                      "name": "win_pct",
+                      "expression": "`win_pct`"
+                    },
+                    {
+                      "name": "games_played",
+                      "expression": "`games_played`"
+                    },
+                    {
+                      "name": "wins",
+                      "expression": "`wins`"
+                    },
+                    {
+                      "name": "losses",
+                      "expression": "`losses`"
+                    },
+                    {
+                      "name": "ranking_status",
+                      "expression": "`ranking_status`"
+                    },
+                    {
+                      "name": "cohort_id",
+                      "expression": "`cohort_id`"
+                    },
+                    {
+                      "name": "lineup_id",
+                      "expression": "`lineup_id`"
+                    }
+                  ],
+                  "orders": [
+                    {
+                      "expression": "`ranking_status`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`win_pct`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`games_played`",
+                      "direction": "DESC"
+                    },
+                    {
+                      "expression": "`cohort_id`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`team`",
+                      "direction": "ASC"
+                    },
+                    {
+                      "expression": "`lineup_id`",
+                      "direction": "ASC"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "worst_rank",
+                    "displayName": "Worst rank",
+                    "title": "Worst rank",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 0,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "lineup",
+                    "displayName": "Models and roles",
+                    "title": "Models and roles",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 1,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "team",
+                    "displayName": "Team",
+                    "title": "Team",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 2,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "win_pct",
+                    "displayName": "Win %",
+                    "title": "Win %",
+                    "type": "float",
+                    "displayAs": "number",
+                    "numberFormat": "0.0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 3,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "games_played",
+                    "displayName": "Games",
+                    "title": "Games",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 4,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "wins",
+                    "displayName": "Wins",
+                    "title": "Wins",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 5,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "losses",
+                    "displayName": "Losses",
+                    "title": "Losses",
+                    "type": "integer",
+                    "displayAs": "number",
+                    "numberFormat": "0",
+                    "alignContent": "right",
+                    "visible": true,
+                    "order": 6,
+                    "allowHTML": false,
+                    "allowSearch": false
+                  },
+                  {
+                    "fieldName": "ranking_status",
+                    "displayName": "Sample eligibility",
+                    "title": "Sample eligibility",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 7,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "cohort_id",
+                    "displayName": "Cohort",
+                    "title": "Cohort",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 8,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  },
+                  {
+                    "fieldName": "lineup_id",
+                    "displayName": "Lineup ID",
+                    "title": "Lineup ID",
+                    "type": "string",
+                    "displayAs": "string",
+                    "numberFormat": "0",
+                    "alignContent": "left",
+                    "visible": true,
+                    "order": 9,
+                    "allowHTML": false,
+                    "allowSearch": true
+                  }
+                ]
+              },
+              "invisibleColumns": [],
+              "itemsPerPage": 20,
+              "withRowNumber": false,
+              "frame": {
+                "title": "Lowest lineup win rates",
+                "showTitle": true,
+                "showDescription": false
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+resources:
+  dashboards:
+    werewolf_performance:
+      display_name: Werewolf performance - ${bundle.target}
+      file_path: ../src/werewolf_dashboard.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: gold
+      embed_credentials: false

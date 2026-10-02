@@ -10,6 +10,8 @@ variables:
     description: Destination catalog containing bronze, silver, and gold schemas
   source_path:
     description: Existing volume directory containing completed episode JSON files
+  warehouse_id:
+    description: Existing SQL warehouse used by the performance dashboard
   gold_min_games:
     description: Minimum distinct games for gold ranking eligibility
     default: "20"
