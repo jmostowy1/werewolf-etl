@@ -45,7 +45,7 @@ Within the configured catalog:
 - `bronze.werewolf_json_normalized`: streaming ingestion of normalized episode files.
 - `silver.episodes`, `silver.players`, `silver.actions`, `silver.events`: materialized views.
 - `gold.model_role_performance`, `gold.model_overall_performance`, `gold.model_team_performance`, `gold.model_pair_performance`, `gold.team_lineup_performance`, `gold.team_episode_results`: materialized views.
-- `gold.game_timeline`: a persistent Unity Catalog **regular view** joining silver actions, events, and players. It stores its SQL definition, so full action text is not copied into another gold table.
+- `gold.game_timeline`: a Unity Catalog **materialized view** joining silver actions, events, and players. It persists the timeline rows, including reasoning and messages, for dashboard queries and refreshes with the same ETL pipeline as the other gold outputs.
 
 The code names the `silver` and `gold` schemas explicitly. A separate environment needs a separate catalog; changing only the pipeline's default schema does not isolate these outputs. The catalog and source volume must exist, and the execution identity needs permission to read the source and create the outputs.
 
@@ -83,7 +83,7 @@ databricks bundle deploy -t prod -p werewolf --select dashboards.werewolf_perfor
 databricks bundle summary -t prod -p werewolf
 ```
 
-A normal update publishes the timeline view; no bronze full refresh is needed. Deploying code alone does not run the pipeline.
+A normal update refreshes the timeline materialized view after its silver dependencies; no bronze full refresh is needed. Its SQL file is already registered in the pipeline's libraries, so both manual updates and the file-arrival kickoff job include it. Deploying code alone does not run the pipeline.
 
 The kickoff job definition currently uses key `werewolf-etl-kickoff`, while earlier deployment state used `werewolf_kickoff`. Reconcile that existing job binding before a full bundle deployment so the rename does not unintentionally create or replace a job. The timeline deployment selected only the pipeline and dashboard. The job's file-arrival trigger is unpaused and currently watches the production source volume.
 
@@ -144,7 +144,7 @@ The chart uses Databricks' custom Vega-Lite visualization and its reserved `data
 
 Discussion and voting groups use recorded player-order events. An order wrap advances a shared round, so a skipped speaker does not shift every later action for that player. Separate order events create separate voting sessions within the same phase. Round numbers are **inferred**: retries or wholly missing rounds cannot always be distinguished from the retained records. Without a protocol order, actions remain separate steps rather than being assigned a guessed round.
 
-`group_order` is numeric; display labels are not used to determine chronology. Outcomes use event coordinates and their structured targets. Full text is joined from `silver.actions`. Roster anchors carry no action text. This view is for visualization; use the existing silver and performance tables for analytics.
+`group_order` is numeric; display labels are not used to determine chronology. Outcomes use event coordinates and their structured targets. Full text is joined from `silver.actions` and persisted in the materialized result. Roster anchors carry no action text. Dashboard queries read the last successful refresh rather than recomputing the joins. This view is for visualization; use the existing silver and performance tables for analytics.
 
 ### Editing the Vega-Lite chart
 
@@ -173,7 +173,7 @@ The repair was republished on October 2, 2026 at 17:07:15 UTC. The downloaded da
 
 The bundle dashboard now uses `gold.game_timeline`; it has no dependency on `gold.game_action`. The standalone `ww_game_actions.py` overwrite writer is no longer part of the codebase.
 
-The existing remote `workspace.gold.game_action` table was retained because the separate **Gold ETL Dashboard** (`01f1bce81bd51eed8bc9f7f335a866cc`) still references it. Retire that table only after migrating or retiring its remaining consumers. No compatibility table or duplicate text storage was introduced for the new dashboard.
+The existing remote `workspace.gold.game_action` table was retained because the separate **Gold ETL Dashboard** (`01f1bce81bd51eed8bc9f7f335a866cc`) still references it. Retire that table only after migrating or retiring its remaining consumers. No compatibility table was introduced; materializing `gold.game_timeline` now adds stored timeline rows and text.
 
 ## Tests and deployment verification
 
@@ -198,7 +198,7 @@ Those tests load the parser helpers without importing Spark and verify event com
 Verification on October 2, 2026:
 
 - Twelve synthetic timeline assertions passed on the warehouse.
-- Pipeline update `233f9142-d716-450f-93ef-f4dc88934bf5` completed without a full refresh; Unity Catalog reports `workspace.gold.game_timeline` as `VIEW`.
+- Initial pipeline update `233f9142-d716-450f-93ef-f4dc88934bf5` completed without a full refresh and created `workspace.gold.game_timeline` as a regular view. It has since been changed to a materialized view; see the history below.
 - The published view returned 103 unique markers across 24 groups for episode `74788868`: 53 actions, 5 elected targets, 4 eliminations, 1 save, and 40 invisible roster anchors. All 53 actions matched event timestamps and retained reasoning; 28 retained chat messages.
 - The standalone Vega-Lite specification compiled and rendered in headless Chrome using data from that published view. Vote labels, outcome markers, chronology, and player rows were visually inspected.
 - The production dashboard API confirms five pages, twelve datasets, the custom visualization, and a published revision dated October 2, 2026. Publishing uses the existing warehouse and viewer credentials.
@@ -211,11 +211,19 @@ Earlier dashboard deployments on October 1-2 used the development dashboard (`01
 
 ## Pipeline history
 
+### Materialized game timeline
+
+`gold.game_timeline` is defined with `CREATE OR REFRESH MATERIALIZED VIEW` in the existing SQL pipeline library. The pipeline resolves its dependencies on `silver.actions`, `silver.events`, and `silver.players` and refreshes it during normal ETL updates. It uses the existing kickoff job; no separate schedule or standalone materialized-view pipeline is required.
+
+Databricks rejected the initial in-place conversion with `CANNOT_CHANGE_DATASET_TYPE`. The original regular view definition was backed up and the regular view was dropped so the same pipeline could recreate that name as a materialized view. There were no direct object grants to restore. This one-time replacement does not change the timeline schema or dashboard queries, and subsequent updates use the normal refresh behavior.
+
+Verified on October 2, 2026: update `28346c48-6d87-4218-9483-d2e35bbef480` completed without a full refresh, including the `workspace.gold.game_timeline` flow. Unity Catalog reports `MATERIALIZED_VIEW` owned by pipeline `fef6524a-702b-4adc-b8e2-9b6a2aa5f70d`. Episode `74788868` still contains 103 unique markers across 24 groups: 53 actions, 5 elected targets, 1 save, 4 eliminations, and 40 roster anchors. All 53 action timestamps and reasoning values, and all 28 chat messages, remain present.
+
 See the [assessment and change record](docs/74792170-structure-assessment.md) for ingestion schemas and event compaction history. The timeline addition preserves the Python pipeline and its bronze/silver schemas. Historical bronze rows are not compacted by deploying code alone; rebuilding them requires a complete source archive or a separate migration plan.
 
 ## References
 
-- [Published views in pipelines](https://docs.databricks.com/aws/en/ldp/developer/ldp-sql-ref-create-view)
+- [Materialized views in pipelines](https://docs.databricks.com/aws/en/ldp/developer/ldp-sql-ref-create-materialized-view)
 - [Custom dashboard visualizations](https://docs.databricks.com/aws/en/dashboards/manage/visualizations/custom-visualizations)
 - [Bundle variables](https://docs.databricks.com/aws/en/dev-tools/bundles/variables)
 - [Adopt existing resources](https://docs.databricks.com/aws/en/dev-tools/bundles/migrate-resources)

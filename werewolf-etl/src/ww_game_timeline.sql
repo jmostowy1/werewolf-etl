@@ -1,7 +1,8 @@
--- Published regular view: full action text stays in silver, not another gold copy.
+-- Materialized with the other ETL outputs; refreshed after its silver dependencies.
 -- Source coordinates, rather than action-type priorities, define chronology.
-CREATE VIEW gold.game_timeline
+CREATE OR REFRESH MATERIALIZED VIEW gold.game_timeline
 COMMENT 'Werewolf action and outcome markers; includes invisible roster anchors for the game timeline.'
+TBLPROPERTIES ('quality' = 'gold')
 AS
 WITH event_fields AS (
   SELECT e.*,
