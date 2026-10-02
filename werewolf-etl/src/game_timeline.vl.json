@@ -1,0 +1,437 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "data": {
+    "name": "databricks_query"
+  },
+  "width": "container",
+  "height": "container",
+  "config": {
+    "autosize": {
+      "type": "fit",
+      "contains": "padding"
+    },
+    "view": {
+      "stroke": null
+    },
+    "axis": {
+      "labelFontSize": 11
+    }
+  },
+  "encoding": {
+    "x": {
+      "field": "group_label",
+      "type": "nominal",
+      "sort": {
+        "field": "group_order",
+        "op": "min",
+        "order": "ascending"
+      },
+      "axis": {
+        "title": "Game progression · groups follow source order",
+        "labelAngle": -55,
+        "labelLimit": 220
+      },
+      "scale": {
+        "padding": 0.3
+      }
+    },
+    "y": {
+      "field": "player_label",
+      "type": "nominal",
+      "sort": {
+        "field": "display_seat_index",
+        "op": "min",
+        "order": "ascending"
+      },
+      "axis": {
+        "title": "Player · model (seat order)",
+        "labelLimit": 230,
+        "grid": true
+      }
+    }
+  },
+  "layer": [
+    {
+      "transform": [
+        {
+          "filter": "datum.marker_kind === 'roster'"
+        }
+      ],
+      "mark": {
+        "type": "point",
+        "opacity": 0,
+        "tooltip": null
+      }
+    },
+    {
+      "transform": [
+        {
+          "aggregate": [
+            {
+              "op": "min",
+              "field": "group_order",
+              "as": "group_order"
+            }
+          ],
+          "groupby": [
+            "group_label",
+            "phase"
+          ]
+        }
+      ],
+      "mark": {
+        "type": "rect",
+        "opacity": 0.06,
+        "tooltip": null
+      },
+      "encoding": {
+        "y": {
+          "value": 0
+        },
+        "y2": {
+          "value": {
+            "expr": "height"
+          }
+        },
+        "color": {
+          "condition": {
+            "test": "datum.phase === 'Night'",
+            "value": "#456990"
+          },
+          "value": "#e6ac29"
+        }
+      }
+    },
+    {
+      "transform": [
+        {
+          "filter": "datum.marker_kind !== 'roster'"
+        }
+      ],
+      "mark": {
+        "type": "point",
+        "filled": true,
+        "size": 160,
+        "strokeWidth": 2
+      },
+      "encoding": {
+        "color": {
+          "field": "action_label",
+          "type": "nominal",
+          "title": "Action / outcome",
+          "scale": {
+            "domain": [
+              "Discussion",
+              "Wolf vote",
+              "Village vote",
+              "Heal",
+              "Inspect",
+              "Elected target",
+              "Saved",
+              "Eliminated",
+              "NoOpAction"
+            ],
+            "range": [
+              "#4477aa",
+              "#aa3377",
+              "#ee7733",
+              "#228833",
+              "#66ccee",
+              "#9944aa",
+              "#009988",
+              "#cc3311",
+              "#888888"
+            ]
+          }
+        },
+        "shape": {
+          "field": "marker_kind",
+          "type": "nominal",
+          "title": "Marker",
+          "scale": {
+            "domain": [
+              "action",
+              "vote_result",
+              "save",
+              "elimination"
+            ],
+            "range": [
+              "circle",
+              "diamond",
+              "square",
+              "cross"
+            ]
+          }
+        },
+        "angle": {
+          "condition": {
+            "test": "datum.marker_kind === 'elimination'",
+            "value": 45
+          },
+          "value": 0
+        },
+        "fillOpacity": {
+          "condition": {
+            "test": "datum.marker_kind === 'vote_result'",
+            "value": 0.15
+          },
+          "value": 0.9
+        },
+        "stroke": {
+          "condition": {
+            "test": "datum.marker_kind === 'vote_result'",
+            "value": "#9944aa"
+          },
+          "value": null
+        },
+        "tooltip": [
+          {
+            "field": "display_player_id",
+            "type": "nominal",
+            "title": "Display Player Id"
+          },
+          {
+            "field": "model_name",
+            "type": "nominal",
+            "title": "Model Name"
+          },
+          {
+            "field": "role",
+            "type": "nominal",
+            "title": "Role"
+          },
+          {
+            "field": "team",
+            "type": "nominal",
+            "title": "Team"
+          },
+          {
+            "field": "group_label",
+            "type": "nominal",
+            "title": "Group Label"
+          },
+          {
+            "field": "action_type",
+            "type": "nominal",
+            "title": "Action Type"
+          },
+          {
+            "field": "target_label",
+            "type": "nominal",
+            "title": "Target Label"
+          },
+          {
+            "field": "outcome_type",
+            "type": "nominal",
+            "title": "Outcome Type"
+          },
+          {
+            "field": "outcome_description",
+            "type": "nominal",
+            "title": "Outcome Description"
+          },
+          {
+            "field": "step_index",
+            "type": "quantitative",
+            "title": "Step Index"
+          },
+          {
+            "field": "batch_index",
+            "type": "quantitative",
+            "title": "Batch Index"
+          },
+          {
+            "field": "entry_index",
+            "type": "quantitative",
+            "title": "Entry Index"
+          },
+          {
+            "field": "created_at",
+            "type": "temporal",
+            "title": "Created At"
+          },
+          {
+            "field": "grouping_status",
+            "type": "nominal",
+            "title": "Grouping Status"
+          },
+          {
+            "field": "timestamp_status",
+            "type": "nominal",
+            "title": "Timestamp Status"
+          },
+          {
+            "field": "perceived_threat_level",
+            "type": "nominal",
+            "title": "Perceived Threat Level"
+          },
+          {
+            "field": "prompt_tokens",
+            "type": "quantitative",
+            "title": "Prompt Tokens"
+          },
+          {
+            "field": "completion_tokens",
+            "type": "quantitative",
+            "title": "Completion Tokens"
+          },
+          {
+            "field": "reported_cost",
+            "type": "quantitative",
+            "title": "Reported Cost"
+          },
+          {
+            "field": "error",
+            "type": "nominal",
+            "title": "Error"
+          },
+          {
+            "field": "reasoning",
+            "type": "nominal",
+            "title": "Reasoning"
+          },
+          {
+            "field": "message",
+            "type": "nominal",
+            "title": "Message"
+          }
+        ]
+      }
+    },
+    {
+      "transform": [
+        {
+          "filter": "datum.marker_kind === 'action' && datum.is_vote && isValid(datum.target_label)"
+        }
+      ],
+      "mark": {
+        "type": "text",
+        "dy": -15,
+        "fontSize": 10,
+        "fontWeight": "bold",
+        "color": {
+          "expr": "colors.textPrimary.default"
+        },
+        "limit": 100
+      },
+      "encoding": {
+        "text": {
+          "field": "target_label",
+          "type": "nominal"
+        },
+        "tooltip": [
+          {
+            "field": "display_player_id",
+            "type": "nominal",
+            "title": "Display Player Id"
+          },
+          {
+            "field": "model_name",
+            "type": "nominal",
+            "title": "Model Name"
+          },
+          {
+            "field": "role",
+            "type": "nominal",
+            "title": "Role"
+          },
+          {
+            "field": "team",
+            "type": "nominal",
+            "title": "Team"
+          },
+          {
+            "field": "group_label",
+            "type": "nominal",
+            "title": "Group Label"
+          },
+          {
+            "field": "action_type",
+            "type": "nominal",
+            "title": "Action Type"
+          },
+          {
+            "field": "target_label",
+            "type": "nominal",
+            "title": "Target Label"
+          },
+          {
+            "field": "outcome_type",
+            "type": "nominal",
+            "title": "Outcome Type"
+          },
+          {
+            "field": "outcome_description",
+            "type": "nominal",
+            "title": "Outcome Description"
+          },
+          {
+            "field": "step_index",
+            "type": "quantitative",
+            "title": "Step Index"
+          },
+          {
+            "field": "batch_index",
+            "type": "quantitative",
+            "title": "Batch Index"
+          },
+          {
+            "field": "entry_index",
+            "type": "quantitative",
+            "title": "Entry Index"
+          },
+          {
+            "field": "created_at",
+            "type": "temporal",
+            "title": "Created At"
+          },
+          {
+            "field": "grouping_status",
+            "type": "nominal",
+            "title": "Grouping Status"
+          },
+          {
+            "field": "timestamp_status",
+            "type": "nominal",
+            "title": "Timestamp Status"
+          },
+          {
+            "field": "perceived_threat_level",
+            "type": "nominal",
+            "title": "Perceived Threat Level"
+          },
+          {
+            "field": "prompt_tokens",
+            "type": "quantitative",
+            "title": "Prompt Tokens"
+          },
+          {
+            "field": "completion_tokens",
+            "type": "quantitative",
+            "title": "Completion Tokens"
+          },
+          {
+            "field": "reported_cost",
+            "type": "quantitative",
+            "title": "Reported Cost"
+          },
+          {
+            "field": "error",
+            "type": "nominal",
+            "title": "Error"
+          },
+          {
+            "field": "reasoning",
+            "type": "nominal",
+            "title": "Reasoning"
+          },
+          {
+            "field": "message",
+            "type": "nominal",
+            "title": "Message"
+          }
+        ]
+      }
+    }
+  ]
+}
