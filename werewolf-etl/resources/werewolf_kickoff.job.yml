@@ -1,0 +1,16 @@
+resources:
+  jobs:
+    WW_ETL_Job:
+      name: WW ETL Job
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: /Volumes/workspace/landing/landing/
+          min_time_between_triggers_seconds: 0
+      tasks:
+        - task_key: Run_WW_Pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.werewolf.id}
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED

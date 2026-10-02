@@ -1,0 +1,15 @@
+resources:
+  pipelines:
+    werewolf:
+      name: werewolf-etl-${bundle.target}
+      catalog: ${var.catalog}
+      schema: bronze
+      serverless: true
+      continuous: false
+      libraries:
+        - file:
+            path: ../src/werewolf_pipeline.py
+      configuration:
+        werewolf.source_path: ${var.source_path}
+        werewolf.silver_schema: ${var.catalog}.silver
+        werewolf.gold_min_games: ${var.gold_min_games}

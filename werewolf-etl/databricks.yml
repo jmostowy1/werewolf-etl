@@ -4,7 +4,21 @@ bundle:
 
 include:
   - resources/*.yml
-  - resources/*/*.yml
+
+variables:
+  catalog:
+    description: Destination catalog containing bronze, silver, and gold schemas
+  source_path:
+    description: Existing volume directory containing completed episode JSON files
+  gold_min_games:
+    description: Minimum distinct games for gold ranking eligibility
+    default: "20"
+
+sync:
+  exclude:
+    - tests/**
+    - docs/**
+    - "**/__pycache__/**"
 
 targets:
   # The 'dev' target, for development purposes. This target is the default.

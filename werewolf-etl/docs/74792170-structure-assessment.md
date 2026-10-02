@@ -253,7 +253,7 @@ The most useful compact first deliverable would therefore be **one episode row, 
 
 ### 9.1 Deployment and design
 
-The Python source in `werewolf_pipeline.py` publishes the streaming bronze table `werewolf_json_normalized` and four silver materialized views: `episodes`, `players`, `actions`, and `events`. Layer membership is recorded with the `quality` table property; all five datasets use the configured target catalog/schema. Bronze and silver are logical layers here, not separate schema names. Both observation tables and their intermediate payloads are omitted to reduce storage. Source observations are scanned only to resolve and validate player identities. The optional `text_blobs` table is not created.
+The Python source in `src/werewolf_pipeline.py` publishes the streaming bronze table `werewolf_json_normalized` and four silver materialized views: `episodes`, `players`, `actions`, and `events`. Layer membership is recorded with the `quality` table property. The bundle sets the default schema to `bronze`; the source explicitly publishes the four silver views in `silver` and the six gold views in `gold`, within the configured catalog. Both observation tables and their intermediate payloads are omitted to reduce storage. Source observations are scanned only to resolve and validate player identities. The optional `text_blobs` table is not created.
 
 Use a **Lakeflow Spark Declarative Pipeline** with Python source support and `from pyspark import pipelines as dp`. Auto Loader incrementally ingests complete episode files into a published streaming table using `@dp.table`. The four silver definitions use batch reads and `@dp.materialized_view`. A pipeline-scoped temporary view performs shared deduplication and episode-conflict checks before silver records are expanded. [Databricks mixed streaming and materialized-view pattern](https://docs.databricks.com/aws/en/ldp/transform)
 
@@ -261,8 +261,8 @@ Setup:
 
 1. Upload the original JSON files to a Unity Catalog volume or another cloud location readable by the pipeline. A Databricks worker cannot read the local Windows `D:` drive.
 2. Select a target catalog and schema for the pipeline. Reserve the bronze table name and four silver view names for this pipeline.
-3. Upload `werewolf_pipeline.py` from this project to your Databricks workspace and add it as a pipeline source file.
-4. Set the pipeline configuration key `werewolf.source_path` to the input directory, for example `/Volumes/main/werewolf/raw/episodes`. Keep complete source files immutable and retain them for full rebuilds and audit references.
+3. Deploy from the `werewolf-etl` bundle directory using the [bundle README](../README.md). The pipeline resource loads `src/werewolf_pipeline.py`; the same file contains the gold definitions.
+4. Supply the required bundle variables `catalog` and `source_path`, for example `/Volumes/main/werewolf/raw/episodes` for the latter. The bundle sets the pipeline configuration keys automatically. Keep complete source files immutable and retain them for full rebuilds and audit references.
 5. Run a triggered update and execute the validation queries in section 9.4 in the target catalog/schema.
 
 The input reader uses Auto Loader (`cloudFiles`) with `cloudFiles.format = binaryFile`, which supplies one row per discovered file with its path and binary content. This handles both one-line and pretty-printed JSON and allows hashing the exact original bytes. [Databricks Auto Loader binary-file example](https://docs.databricks.com/gcp/en/ingestion/cloud-object-storage/auto-loader/patterns)
@@ -271,7 +271,7 @@ The parser is a pure Python UDF with explicit Spark output schemas. It reads one
 
 ### 9.2 Python pipeline source file
 
-The complete pipeline definitions are maintained in [werewolf_pipeline.py](<C:/Users/jason/OneDrive/Documents/Coding Projects/AFS Coding Challenge/werewolf_pipeline.py>). Add this file to the Databricks pipeline as a Python source. The current implementation calculates `players.is_alive_winner` as true only when both `is_alive_final` and `is_winner` are true; all other combinations, including nulls, produce false. This field is calculated in silver from persisted bronze data.
+The complete pipeline definitions are maintained in [src/werewolf_pipeline.py](../src/werewolf_pipeline.py). Add this file to the Databricks pipeline as a Python source. The current implementation calculates `players.is_alive_winner` as true only when both `is_alive_final` and `is_winner` are true; all other combinations, including nulls, produce false. This field is calculated in silver from persisted bronze data.
 
 ### 9.3 Refresh, integrity, and payload behavior
 
@@ -291,11 +291,11 @@ The complete pipeline definitions are maintained in [werewolf_pipeline.py](<C:/U
 
 ### 9.4 Validation after the first update
 
-Run these SQL statements separately in the configured target catalog/schema. Expected results apply to episode `74792170`; other episodes can have different counts.
+Run these SQL statements separately with the destination catalog selected and `silver` as the current schema. Bronze references are explicitly qualified. Expected results apply to episode `74792170`; other episodes can have different counts.
 
 ```sql
 -- Expected: quality=bronze for the streaming table; silver for each view.
-SHOW TBLPROPERTIES werewolf_json_normalized ('quality');
+SHOW TBLPROPERTIES bronze.werewolf_json_normalized ('quality');
 SHOW TBLPROPERTIES episodes ('quality');
 SHOW TBLPROPERTIES players ('quality');
 SHOW TBLPROPERTIES actions ('quality');
@@ -303,7 +303,7 @@ SHOW TBLPROPERTIES events ('quality');
 
 -- Expected: one row for this episode when only its original file is ingested.
 SELECT episode_id, source_path, source_sha256
-FROM werewolf_json_normalized WHERE episode_id = 74792170;
+FROM bronze.werewolf_json_normalized WHERE episode_id = 74792170;
 
 -- Expected: 1, 8, 43, and 238 respectively.
 SELECT 'episodes' AS dataset, count(*) AS row_count
@@ -357,19 +357,19 @@ WHERE episode_id = 74792170 AND event_name = 'discussion'
 
 ### 9.5 Event compaction verification
 
-The standard-library tests in [testing/test_event_compaction.py](<C:/Users/jason/OneDrive/Documents/Coding Projects/AFS Coding Challenge/testing/test_event_compaction.py>) load the actual parser helpers without importing Spark. Run:
+The standard-library tests in [tests/test_event_compaction.py](../tests/test_event_compaction.py) load the actual parser helpers without importing Spark. Run from the `werewolf-etl` bundle directory:
 
 ```powershell
-python -m unittest discover -s testing -p test_event_compaction.py
+python -m unittest discover -s tests -p test_event_compaction.py
 ```
 
 They cover recursive field removal, error flags, preservation of unknown structured fields, null payloads, narrative descriptions, and the sample's 290 events and 53 unique action/event matches. Python tests and Databricks execution have not been run in this workspace because the available Python executable cannot launch. Independent sample checks are recorded separately below.
 
-An independent PowerShell check using the field-removal lists from the Python source preserved all 290 events and all 53 unique action/event matches in `testing/74788868.json`, while clearing 48 telemetry descriptions. The combined `event_json`, serialized `data_json`, and description text decreased from approximately 4,794,696 bytes to 99,819 bytes (97.92%). These are uncompressed logical text estimates using PowerShell JSON serialization, not measured Delta storage savings or an execution of the Python parser. Configuration, player, and action storage is outside this measurement.
+An independent PowerShell check using the field-removal lists from the Python source preserved all 290 events and all 53 unique action/event matches in `tests/fixtures/74788868.json`, while clearing 48 telemetry descriptions. The combined `event_json`, serialized `data_json`, and description text decreased from approximately 4,794,696 bytes to 99,819 bytes (97.92%). These are uncompressed logical text estimates using PowerShell JSON serialization, not measured Delta storage savings or an execution of the Python parser. Configuration, player, and action storage is outside this measurement.
 
 ## 10. Pipeline change record
 
-The version labels below track revisions to the pipeline definitions in `werewolf_pipeline.py`. They are separate from the source JSON's game, module, and schema versions and do not indicate deployed releases. Section 9 links to the current source file and documents its deployment and validation.
+The version labels below track revisions to the pipeline definitions in `src/werewolf_pipeline.py`. They are separate from the source JSON's game, module, and schema versions and do not indicate deployed releases. Section 9 links to the current source file and documents its deployment and validation.
 
 | Pipeline version | Change from previous version | Effect |
 |---|---|---|
@@ -380,5 +380,7 @@ The version labels below track revisions to the pipeline definitions in `werewol
 | v5 — Compact event storage (current) | Removes `event_json` from bronze and silver, recursively strips repeated audit/instruction text from `data_json`, replaces event error details with `has_error`, and clears action-telemetry descriptions. | Retains event rows, keys, timestamps, visibility, structured results, and action-matching fields. Useful narrative descriptions remain. Historical bronze rows need a rebuild or migration to realize the same reduction. |
 
 The pipeline source was moved from section 9 into `werewolf_pipeline.py` without changing v3 behavior. This file organization change does not introduce a new pipeline version.
+
+The repository was subsequently organized under the `werewolf-etl` bundle: source in `src/`, tests and sample data in `tests/`, and this assessment in `docs/`. Pipeline and kickoff-job resource YAML files now reference the combined source. This packaging change preserves v5 transformation logic. See the [bundle README](../README.md) for configuration, adoption of existing resources, and deployment.
 
 The version record documents changes to the definitions. No pipeline version has been executed or deployed to Databricks from this workspace.

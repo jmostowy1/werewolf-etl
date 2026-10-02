@@ -1,4 +1,4 @@
-"""Run with: python -m unittest discover -s testing -p test_event_compaction.py
+"""From the bundle root: python -m unittest discover -s tests -p test_event_compaction.py
 
 Loads the actual pure parser functions without requiring PySpark/Databricks.
 """
@@ -12,7 +12,7 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = (ROOT / "werewolf_pipeline.py").read_text(encoding="utf-8")
+SOURCE = (ROOT / "src" / "werewolf_pipeline.py").read_text(encoding="utf-8")
 TREE = ast.parse(SOURCE)
 CONSTANTS = {"EVENT_PAYLOAD_TEXT_FIELDS", "ACTION_TELEMETRY_EVENTS"}
 NAMESPACE = {
@@ -27,7 +27,7 @@ NODES = [
         for target in node.targets))
 ]
 exec(compile(ast.Module(body=NODES, type_ignores=[]),
-             str(ROOT / "werewolf_pipeline.py"), "exec"), NAMESPACE)
+             str(ROOT / "src" / "werewolf_pipeline.py"), "exec"), NAMESPACE)
 
 
 class EventCompactionTests(unittest.TestCase):
@@ -68,7 +68,7 @@ class EventCompactionTests(unittest.TestCase):
         }))
 
     def test_sample_preserves_events_and_action_matches(self):
-        sample = ROOT / "testing" / "74788868.json"
+        sample = ROOT / "tests" / "fixtures" / "74788868.json"
         content = sample.read_bytes()
         root = json.loads(content)
         output = NAMESPACE["normalize_episode"](content, str(sample))
