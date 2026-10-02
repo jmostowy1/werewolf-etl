@@ -1,7 +1,7 @@
 resources:
   jobs:
-    WW_ETL_Job:
-      name: WW ETL Job
+    werewolf-etl-kickoff:
+      name: werewolf-etl-kickoff
       trigger:
         pause_status: UNPAUSED
         file_arrival:
