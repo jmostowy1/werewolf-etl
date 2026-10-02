@@ -367,30 +367,70 @@
                 "- Small number of werewolves collaborate to (\\**ehem\\**) \"eliminate\" villagers one-by-one, while attempting to avoid scrutiny and cast suspicion on other players\n",
                 "- Villagers collaborate to identify and (\\**ehem\\**) \"exile\" the werewolves before the werewolves obtain the majority\n",
                 "- Kaggle pits LLMs against each other as a benchmark to test communication, collaboration, and complex strategic thinking\n",
-                "    - Provide game outcomes as JSON files for public exploration\n",
+                "    - Provide[ game outcomes](https://www.kaggle.com/benchmarks/kaggle/werewolf/versions/1) as JSON files for public exploration\n",
                 "\n",
                 "### Goals\n",
                 "\n",
                 "- Build an ETL pipeline to parse gameplay JSON files into a full bronze/silver/gold medallion architecture\n",
                 "- Create dashboards to explore game progression, compare model performance, identify factors affecting game outcomes, and flag strong/weak model pairs.\n",
-                "- Implement unified version control for all resources (pipeline, kickoff job, dashboard) using DABs\n",
+                "- Implement unified version control for all resources (pipeline, kickoff job, dashboard) using DABs"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 12
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "49349bc8",
+      "displayName": "ETL Design",
+      "layout": [
+        {
+          "widget": {
+            "name": "f1435e6b",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## <span style=\"font-size:24px\">ETL Pipeline and Resource Deployment</span>\n",
+                "<p>&nbsp;</p>\n",
                 "\n",
-                "### Data pipeline\n",
+                "### Challenges\n",
                 "\n",
-                "- **Landing:&#32;**\n",
-                "- **Bronze:** Streaming ingestion of normalized JSON, excluding large unused payloads.\n",
-                "- **Silver:** Structured episodes, players, actions, and events.\n",
-                "- **Gold:** Model/team performance summaries and a game timeline.\n",
-                "- A file-arrival job triggers one serverless Lakeflow pipeline containing Python and SQL definitions.\n",
+                "- Environment limited to Serverless compute- costly\n",
+                "- Full dataset is 30K JSON game records, each \\~7.5 MB; 230 GB total\n",
+                "- Variable JSON length => full file ingest before parsing\n",
+                "\n",
+                "### Solutions\n",
+                "\n",
+                "- Work off a game subset (\\~1K records)\n",
+                "- Limit bronze table to key JSON elements, retain files in Volume\n",
+                "- Incremental refresh for bronze table to limit JSON reads\n",
+                "\n",
+                "### UC Medallion Architecture\n",
+                "\n",
+                "- **Landing:&#32;** Volume containing raw game record JSON files\n",
+                "- **Bronze:** Single streaming table ingestion of normalized JSON, excluding large unused payloads\n",
+                "- **Silver:** Structured episodes, players, actions, and events\n",
+                "- **Gold:** Model/team performance summaries and a game timeline\n",
+                "\n",
+                "### ETL Orchestration\n",
+                "\n",
+                "- [Kickoff job](https://dbc-b14fd7ae-c2b5.cloud.databricks.com/jobs/79899079233069?o=7474648320653999) detects file addition to Landing volume, triggers ETL pipeline\n",
+                "- [Pipeline ](https://dbc-b14fd7ae-c2b5.cloud.databricks.com/pipelines/fef6524a-702b-4adc-b8e2-9b6a2aa5f70d?o=7474648320653999)loads/parses new JSON files from Landing and incrementally writes to bronze table\n",
+                "- Silver and gold data saved as materialized views; incrementally refreshed\n",
                 "\n",
                 "### Bundle deployment\n",
                 "\n",
-                "- The `werewolf-etl` Databricks bundle manages the pipeline, kickoff job, and dashboard together.\n",
-                "- `databricks.yml` configures the production workspace, catalog, source volume, and SQL warehouse.\n",
-                "- **Release flow:** Validate → Review deployment plan → Deploy → Verify dashboard publication.\n",
-                "<p>&nbsp;</p>\n",
-                "\n",
-                "https://www.kaggle.com/benchmarks/kaggle/werewolf/versions/1"
+                "- `werewolf-etl` DAB wraps all resources under single versioning/deployment framework backed by a [Git repo](https://github.com/jmostowy1/werewolf-etl.git)\n",
+                "    - Kickoff job\n",
+                "    - ETL pipeline\n",
+                "    - Visualization dashboard"
               ]
             }
           },
