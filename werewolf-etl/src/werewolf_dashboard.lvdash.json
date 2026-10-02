@@ -454,9 +454,7 @@
             "name": "timeline_intro",
             "multilineTextboxSpec": {
               "lines": [
-                "# Game progression\n",
-                "\n",
-                "Choose one episode. Circles are actions; vote targets appear above them. Diamonds show elected targets, squares show successful saves, and red crosses show actual eliminations. Hover a marker for its full reasoning, message, and event details. Use the episode and day/night controls to narrow the detail table below. Day and night columns have different shading. Rounds follow recorded player order when available; otherwise actions retain individual step positions."
+                "## Game progression"
               ]
             }
           },
@@ -464,7 +462,7 @@
             "x": 0,
             "y": 0,
             "width": 12,
-            "height": 2
+            "height": 1
           }
         },
         {
@@ -534,7 +532,7 @@
           },
           "position": {
             "x": 0,
-            "y": 2,
+            "y": 1,
             "width": 4,
             "height": 1
           }
@@ -576,7 +574,7 @@
           },
           "position": {
             "x": 4,
-            "y": 2,
+            "y": 1,
             "width": 4,
             "height": 1
           }
@@ -904,359 +902,9 @@
           },
           "position": {
             "x": 0,
-            "y": 3,
+            "y": 2,
             "width": 12,
-            "height": 13
-          }
-        },
-        {
-          "widget": {
-            "name": "timeline_details",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "f5aacb1b",
-                  "fields": [
-                    {
-                      "name": "marker_id",
-                      "expression": "`marker_id`"
-                    },
-                    {
-                      "name": "display_player_id",
-                      "expression": "`display_player_id`"
-                    },
-                    {
-                      "name": "model_name",
-                      "expression": "`model_name`"
-                    },
-                    {
-                      "name": "action_label",
-                      "expression": "`action_label`"
-                    },
-                    {
-                      "name": "target_label",
-                      "expression": "`target_label`"
-                    },
-                    {
-                      "name": "outcome_type",
-                      "expression": "`outcome_type`"
-                    },
-                    {
-                      "name": "outcome_description",
-                      "expression": "`outcome_description`"
-                    },
-                    {
-                      "name": "reasoning",
-                      "expression": "`reasoning`"
-                    },
-                    {
-                      "name": "message",
-                      "expression": "`message`"
-                    },
-                    {
-                      "name": "group_label",
-                      "expression": "`group_label`"
-                    },
-                    {
-                      "name": "step_index",
-                      "expression": "`step_index`"
-                    },
-                    {
-                      "name": "created_at",
-                      "expression": "`created_at`"
-                    },
-                    {
-                      "name": "perceived_threat_level",
-                      "expression": "`perceived_threat_level`"
-                    },
-                    {
-                      "name": "prompt_tokens",
-                      "expression": "`prompt_tokens`"
-                    },
-                    {
-                      "name": "completion_tokens",
-                      "expression": "`completion_tokens`"
-                    },
-                    {
-                      "name": "reported_cost",
-                      "expression": "`reported_cost`"
-                    },
-                    {
-                      "name": "error",
-                      "expression": "`error`"
-                    },
-                    {
-                      "name": "grouping_status",
-                      "expression": "`grouping_status`"
-                    },
-                    {
-                      "name": "timestamp_status",
-                      "expression": "`timestamp_status`"
-                    }
-                  ],
-                  "filters": [
-                    {
-                      "expression": "`marker_kind` <> 'roster'"
-                    }
-                  ],
-                  "disaggregated": true
-                }
-              }
-            ],
-            "spec": {
-              "version": 1,
-              "widgetType": "table",
-              "frame": {
-                "title": "Marker details",
-                "showTitle": true,
-                "description": "Full reasoning, messages, and event details for the selected episode and day/night phase. Hover chart markers to inspect individual actions.",
-                "showDescription": true
-              },
-              "allowHTMLByDefault": false,
-              "condensed": false,
-              "invisibleColumns": [],
-              "itemsPerPage": 10,
-              "withRowNumber": false,
-              "encodings": {
-                "columns": [
-                  {
-                    "fieldName": "marker_id",
-                    "displayName": "Marker Id",
-                    "title": "Marker Id",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 0,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "display_player_id",
-                    "displayName": "Display Player Id",
-                    "title": "Display Player Id",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 1,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "model_name",
-                    "displayName": "Model Name",
-                    "title": "Model Name",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 2,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "action_label",
-                    "displayName": "Action Label",
-                    "title": "Action Label",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 3,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "target_label",
-                    "displayName": "Target Label",
-                    "title": "Target Label",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 4,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "outcome_type",
-                    "displayName": "Outcome Type",
-                    "title": "Outcome Type",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 5,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "outcome_description",
-                    "displayName": "Outcome Description",
-                    "title": "Outcome Description",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 6,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "reasoning",
-                    "displayName": "Reasoning",
-                    "title": "Reasoning",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 7,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "message",
-                    "displayName": "Message",
-                    "title": "Message",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 8,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "group_label",
-                    "displayName": "Group Label",
-                    "title": "Group Label",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 9,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "step_index",
-                    "displayName": "Step Index",
-                    "title": "Step Index",
-                    "type": "float",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 10,
-                    "allowHTML": false,
-                    "allowSearch": false,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "created_at",
-                    "displayName": "Created At",
-                    "title": "Created At",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 11,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "perceived_threat_level",
-                    "displayName": "Perceived Threat Level",
-                    "title": "Perceived Threat Level",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 12,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "prompt_tokens",
-                    "displayName": "Prompt Tokens",
-                    "title": "Prompt Tokens",
-                    "type": "float",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 13,
-                    "allowHTML": false,
-                    "allowSearch": false,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "completion_tokens",
-                    "displayName": "Completion Tokens",
-                    "title": "Completion Tokens",
-                    "type": "float",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 14,
-                    "allowHTML": false,
-                    "allowSearch": false,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "reported_cost",
-                    "displayName": "Reported Cost",
-                    "title": "Reported Cost",
-                    "type": "float",
-                    "displayAs": "number",
-                    "visible": true,
-                    "order": 15,
-                    "allowHTML": false,
-                    "allowSearch": false,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "error",
-                    "displayName": "Error",
-                    "title": "Error",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 16,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "grouping_status",
-                    "displayName": "Grouping Status",
-                    "title": "Grouping Status",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 17,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  },
-                  {
-                    "fieldName": "timestamp_status",
-                    "displayName": "Timestamp Status",
-                    "title": "Timestamp Status",
-                    "type": "string",
-                    "displayAs": "string",
-                    "visible": true,
-                    "order": 18,
-                    "allowHTML": false,
-                    "allowSearch": true,
-                    "preserveWhitespace": true
-                  }
-                ]
-              }
-            }
-          },
-          "position": {
-            "x": 0,
-            "y": 16,
-            "width": 12,
-            "height": 10
+            "height": 11
           }
         }
       ],
