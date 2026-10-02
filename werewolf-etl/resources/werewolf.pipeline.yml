@@ -9,6 +9,8 @@ resources:
       libraries:
         - file:
             path: ../src/werewolf_pipeline.py
+        - file:
+            path: ../src/ww_game_timeline.sql
       configuration:
         werewolf.source_path: ${var.source_path}
         werewolf.silver_schema: ${var.catalog}.silver
